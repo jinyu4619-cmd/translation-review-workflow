@@ -1,0 +1,4 @@
+interface:
+  display_name: "Template Translation Review"
+  short_description: "Review a local template-image folder and export the two final workflow workbooks."
+  default_prompt: "Use $template-translation-review to review the folder C:\\path\\to\\review-folder and save the two workflow output workbooks back into that same folder."
