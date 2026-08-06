@@ -1,0 +1,31 @@
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+
+# Temporary and archives
+*.tmp
+*.temp
+*.log
+*.zip
+
+# Local inspection files
+*.inspect.ndjson
+
+# Optional private review materials
+private/
+
