@@ -1,99 +1,105 @@
 ---
 name: template-translation-review
-description: Review a local folder that contains template translation images plus one or more overview images, then automatically produce the workflow's two final Excel outputs back into that same folder. Use when a user gives a folder path and wants Codex to apply the established multilingual template-translation review workflow, detect whether a prior ledger already exists, continue across multiple batches, perform a lenient translation audit against the Chinese baseline, and export the final ledger workbook plus the final fail workbook.
+description: 审核本地文件夹中的模板翻译图片和总览图，并将最终的两个 Excel 结果表自动输出回原文件夹。用户提供文件夹路径、希望按既定的多语种模板翻译校对流程执行、需要支持首次无台账和后续多批次续审、并按中文模板基准进行宽审核时，使用这个技能。
 ---
 
-# Template Translation Review
+# 模板翻译校对
 
-Review a user-provided local folder of template images and overview images, then save the two final Excel outputs back into that same folder.
+对用户提供的本地文件夹执行模板翻译校对，并把最终的两个 Excel 结果表保存回同一个文件夹。
 
-Read [references/review-standards.md](references/review-standards.md) at the start of every run.
-Read [references/output-schema.md](references/output-schema.md) before assembling the export JSON.
+每次执行前都先阅读 [references/review-standards.md](references/review-standards.md)。
+组装导出 JSON 前，再阅读 [references/output-schema.md](references/output-schema.md)。
 
-## Current-folder rule
+## 当前文件夹规则
 
-Treat the user folder as one language's ongoing review workspace.
+把用户提供的文件夹视为“某一个语种”的持续审核工作文件夹。
 
-- The user may replace the overview image and the PNG image set before every new batch.
-- The current folder therefore represents the latest batch snapshot, not a permanent archive of all older images.
-- The ledger workbook and the fail workbook are the long-term history.
-- Review only templates whose current Chinese and target-language images can both be found in the current folder.
-- If an older pending ledger row does not have matching current images in the current folder, keep it pending and do not force a review result.
-- Track a persistent per-language batch label on every ledger row and every fail row, such as `第1批`, `第2批`, and `第3批`.
-- If the current language has no prior ledger rows, newly accepted templates enter the ledger as `第1批`.
-- If the current language already has ledger rows, add newly accepted templates that are missing from the ledger as the next batch for that language.
-- Before the detailed review starts, explicitly tell the user which batch this run is for that language, such as `英文第2批审核`.
+- 用户在每一批审核前，可能会重新替换总览图和 PNG 图片集。
+- 所以当前文件夹代表的是“本批次最新快照”，不是所有历史图片的永久归档。
+- `检验进度台账.xlsx` 和 `未通过项.xlsx` 才是历史记录。
+- 只审核当前文件夹里能找到中文图和外文图的模板。
+- 如果旧台账里有 `未审核` 项，但当前文件夹里已经找不到对应图片，就继续保留 `未审核`，不要强行给出审核结论。
+- 每一条台账记录和每一条未通过记录，都要保留该语种自己的 `审核批次`，例如 `第1批`、`第2批`、`第3批`。
+- 如果该语种此前没有任何台账记录，本次新进入台账的模板就是 `第1批`。
+- 如果该语种已经有历史台账记录，本次新进入台账的模板就是该语种的下一批。
+- 在正式细审前，必须先明确告诉用户：本次是该语种第几批审核，例如 `英文第2批审核`。
 
-## Workflow
+## 执行流程
 
-1. Confirm the folder path exists and is a local directory.
-2. Run `scripts/scan_review_folder.py <folder>` first.
-3. Inspect the overview-candidate images before inspecting individual template images.
-4. Use the scan result to determine batch mode:
-   - no existing ledger workbook -> first-batch mode,
-   - existing ledger workbook -> follow-up batch mode.
-5. Inspect the overview image and identify templates clearly marked as accepted.
-6. Build or update the ledger:
-   - in first-batch mode, create ledger rows for accepted templates,
-   - in follow-up batch mode, read old ledger rows and add any newly accepted template that is missing from the ledger as `未审核`.
-7. Define the current batch scope as ledger rows still marked `未审核`.
-8. Build a working mapping between Chinese images and target-language images.
-9. Use image content, image order, and overview context together. Do not pair purely by odd or even numbering.
-10. Before the detailed review, tell the user:
-    - how many templates will be reviewed in this batch,
-    - and the estimated completion time.
-11. Review each pending template against the Chinese baseline using the lenient standard in `references/review-standards.md`.
-12. Update current-batch ledger rows from `未审核` to either `通过` or `未通过`.
-13. Merge this run's new failures with any existing fail workbook rows.
-14. Assemble one JSON object that follows `references/output-schema.md`.
-15. Run `scripts/export_review_workbooks.py <json> <folder>` to write the two final Excel files.
-16. Save both files into the same folder the user originally provided.
+1. 先确认用户给出的路径存在，并且是本地文件夹。
+2. 先运行 `scripts/scan_review_folder.py <folder>`。
+3. 先看总览候选图，再看单张模板图。
+4. 根据扫描结果判断当前模式：
+   - 没有历史台账：视为首次审核；
+   - 有历史台账：视为后续批次审核。
+5. 判断当前文件夹对应的语种，可结合文件夹名称、总览图内容和历史台账一起判断。
+6. 查看总览图，识别其中被明确标记为“审核通过”的模板。
+7. 建立或更新台账：
+   - 首次审核时：仅根据总览图中已标记“审核通过”的模板建立该语种 `第1批` 台账；
+   - 后续审核时：读取旧台账，把总览图中新增出现、但台账里还没有的模板加入台账，并标记为该语种下一批的 `未审核`。
+8. 本次进入审核范围的模板，必须同时满足：
+   - 总览图中明确标记“审核通过”；
+   - 台账中状态为 `未审核`，或者是本次刚新增入台账的模板；
+   - 当前文件夹里可以找到本次所需的中文图和外文图。
+9. 对旧的 `未审核` 行，如果这次还能在当前文件夹找到对应图片，可以继续审核，但要保留它原本的 `审核批次`，不要改写成新批次。
+10. 建立中文图和外文图的对应关系。
+11. 结合图片内容、图片顺序和总览图上下文来配对，不要只靠奇偶编号判断。
+12. 正式细审前，必须先告诉用户：
+    - 本次是该语种第几批审核；
+    - 本次需要审核的模板数量；
+    - 预计完成时间。
+13. 按 [references/review-standards.md](references/review-standards.md) 中的宽审核标准，以中文模板图为基准逐一审核。
+14. 把本次实际审核完成的台账行，从 `未审核` 更新为 `通过` 或 `未通过`。
+15. 把本次新增的未通过项与历史未通过项合并。
+16. 按 [references/output-schema.md](references/output-schema.md) 组装完整 JSON。
+17. 运行 `scripts/export_review_workbooks.py <json> <folder>` 导出两个最终 Excel 文件。
+18. 把两个结果文件保存回用户最初提供的同一个文件夹。
 
-## Review Rules
+## 审核原则
 
-- Treat the Chinese template image as the baseline.
-- Use a lenient review standard.
-- Fail the template only for materially wrong translation, obvious language residue, sensitive or political content, or similar high-signal issues.
-- Accept one-to-many translation variants if they remain readable and basically correct.
-- Allow small amounts of English inside other foreign-language templates when they are common terms and do not affect reading.
-- Do not fail templates for style-only polish suggestions.
+- 以中文模板图为基准。
+- 采用宽审核标准。
+- 只重点拦截高影响问题，例如明显错翻、明显残留非目标语言、敏感或政治内容、明显影响阅读的问题。
+- 一义多翻可以放宽，只要表达成立且不影响阅读即可。
+- 在其他外语模板中，少量英文可以放宽，只要不影响阅读。
+- 纯润色类、风格类建议，不要直接判未通过。
 
-## Output Rules
+## 输出要求
 
-- The ledger workbook is cumulative and should preserve old rows plus this batch's updated rows.
-- The fail workbook is cumulative and should preserve old fail rows plus this batch's new fail rows.
-- Every ledger row and every fail row must include the template's original review batch label for that language.
-- Always embed the actual Chinese and target-language images into the fail workbook. Never leave only image IDs.
-- Keep the problem notes and fix suggestions numbered one-to-one.
-- Write every fix suggestion as a direct actionable replacement in the form `original -> replace with`.
+- `检验进度台账.xlsx` 必须保留历史全部记录，并叠加本次结果。
+- `未通过项.xlsx` 必须保留历史全部未通过记录，并叠加本次新增未通过项。
+- 每一条台账记录和每一条未通过记录，都必须带有原始 `审核批次`。
+- `未通过项.xlsx` 中必须嵌入真实的中文模板图和外文模板图，不能只写图片编号。
+- `问题说明` 和 `修改意见` 必须编号，并且一一对应。
+- 每一条 `修改意见` 都要足够明确，直接写出 `原文 -> 建议改为`。
 
-## When To Pause And Ask The User
+## 何时暂停并询问用户
 
-Pause only when one of these blockers occurs:
+只有在以下情况才暂停：
 
-- no overview image can be identified,
-- the folder is missing the target-language image for a template,
-- the image pairing is genuinely ambiguous after inspection,
-- or the user-provided folder lacks enough information to determine the review scope.
+- 无法识别总览图；
+- 当前文件夹缺少某个模板所需的外文图；
+- 认真检查后仍然无法确定中文图和外文图的对应关系；
+- 用户提供的文件夹信息不足，无法确定本次审核范围。
 
-When blocked, tell the user exactly what is missing.
+如果被阻塞，要明确告诉用户具体缺少什么。
 
-## Scripts
+## 附带脚本
 
 ### `scripts/scan_review_folder.py`
 
-Run this at the start to inventory the folder, identify likely overview images, and inspect any existing ledger and fail workbooks.
+在每次执行最开始运行，用于扫描文件夹、识别总览候选图，并读取已有台账和未通过表。
 
 ### `scripts/export_review_workbooks.py`
 
-Run this only after you have assembled the final merged review JSON.
+在已经组装好最终 JSON 后运行，用于导出最终的两个 Excel 文件。
 
-## Expected User Request Pattern
+## 常见触发方式
 
-Typical trigger examples:
+典型请求会像这样：
 
-- `Check this folder: C:\...\English-Test`
-- `Use this workflow to review C:\...\some-language-folder`
-- `Apply the template translation review workflow to this folder and save the result back into the same folder`
+- `用 template-translation-review 检查这个文件夹：C:\...\English-Test`
+- `用这个翻译校对工作流审核 C:\...\某语种文件夹`
+- `对这个文件夹执行模板翻译校对，并把结果保存回原文件夹`
 
-If the user only provides a folder path and the task context is template translation review, use this skill.
+如果用户只提供了文件夹路径，而上下文已经明确是在做模板翻译校对，就直接使用这个技能。

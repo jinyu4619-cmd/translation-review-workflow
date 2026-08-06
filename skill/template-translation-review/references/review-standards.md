@@ -1,131 +1,139 @@
-# Review Standards
+# 审核标准
 
-Use these rules every time this skill reviews template translation images.
+每次执行这个技能时，都按本文件中的规则进行审核。
 
-## Batch logic
+## 批次逻辑
 
-The user will only provide one folder. The skill must determine the batch mode on its own.
+用户每次只会提供一个文件夹，技能需要自己判断当前属于哪种审核模式。
 
-Important operational detail:
+重要前提：
 
-- The user may replace the overview image and the PNG image set before every new batch.
-- The current folder should therefore be treated as the latest batch snapshot.
-- Do not assume older image files are still present.
-- The workbooks carry the history across batches.
+- 用户在每一批审核前，可能会重新替换总览图和 PNG 图片集。
+- 因此，当前文件夹应视为“本批次最新快照”。
+- 不要假设历史图片仍然保留在文件夹里。
+- 历史累计信息由 `检验进度台账.xlsx` 和 `未通过项.xlsx` 承载。
 
-### First-batch mode
+### 首次审核
 
-If no existing ledger workbook is present in the folder:
+如果当前文件夹里没有历史台账：
 
-1. Inspect the overview image.
-2. Identify templates clearly marked as accepted.
-3. Build ledger rows for those accepted templates.
-4. Treat those newly created rows as the current review batch.
+1. 先查看总览图。
+2. 识别总览图中被明确标记为“审核通过”的模板。
+3. 仅根据这些模板建立台账。
+4. 这些首次进入台账的模板属于该语种 `第1批`。
+5. 再把这些模板作为当前批次的审核范围。
 
-### Follow-up batch mode
+### 后续批次审核
 
-If an existing ledger workbook is present in the folder:
+如果当前文件夹里已经存在历史台账：
 
-1. Read the existing ledger workbook.
-2. Inspect the overview image.
-3. Find templates clearly marked as accepted in the overview image.
-4. Add any accepted template that is missing from the ledger as a new ledger row with pending status.
-5. Review only ledger rows that are still pending.
+1. 先读取历史台账。
+2. 再查看这次新的总览图。
+3. 找出总览图中被明确标记为“审核通过”的模板。
+4. 读取该语种在历史台账中的最高批次。
+5. 把“总览图中已审核通过、但旧台账中还没有”的模板加入台账，并标记为该语种下一批的 `未审核`。
+6. 只审核当前仍然是 `未审核`、并且当前文件夹里能找到对应图片的模板。
 
-In other words:
+换句话说：
 
-- no ledger -> create one from overview-accepted templates,
-- existing ledger -> reuse it, add newly accepted templates, and review only pending rows.
+- 没有台账：只靠总览图识别待审模板，并建立 `第1批` 台账；
+- 已有台账：读取旧台账，补充本次新通过总览图的模板，并只审核仍为 `未审核` 的项。
 
-## Per-language batch tracking
+## 按语种记录审核批次
 
-- Each language keeps its own running batch labels in the ledger.
-- When a language enters the ledger for the first time, assign the newly added rows to `第1批`.
-- On later runs for that language, read the existing ledger, find the highest existing batch number for that language, and assign newly accepted templates that are still missing from the ledger to `第N+1批`.
-- Keep the original batch label on old rows even when they are reviewed later.
-- Before the detailed review starts, state clearly which batch this run is for that language, for example `英文第2批审核`.
+- 每个语种单独累计自己的审核批次。
+- 一个语种第一次进入台账时，批次为 `第1批`。
+- 以后同一语种再次新增模板时，批次依次递增为 `第2批`、`第3批`。
+- 一条模板记录一旦进入台账，就保留它原本的 `审核批次`。
+- 后续即使在新一轮审核里处理旧的 `未审核` 项，也不要改写它的原始批次。
+- 正式细审前，必须明确说明“本次是该语种第几批审核”，例如：`英文第2批审核`。
 
-## Scope filter
+## 本次审核范围
 
-Only review templates that satisfy the workflow scope for the current batch:
+只有同时满足以下条件的模板，才进入本轮审核：
 
-1. The overview image clearly marks the template as accepted.
-2. The template is pending in the ledger, or it is newly accepted and not yet present in the ledger.
-3. The template's current Chinese image and current target-language image can both be found in the current folder.
+1. 总览图中明确标记为“审核通过”。
+2. 台账中状态为 `未审核`，或者是本次刚新增进入台账的模板。
+3. 当前文件夹里能找到本次所需的中文图和外文图。
 
-Do not review templates outside that scope.
+不满足上述条件的模板，不要纳入本轮审核。
 
-If a ledger row is still pending but the current folder no longer contains the images needed to review it, keep that row as pending and do not force a result.
+如果台账中某条记录仍为 `未审核`，但当前文件夹里已经找不到它所需的图片，就继续保留 `未审核`，不要强行给出审核结果。
 
-## Ledger status meanings
+## 台账状态说明
 
-- `未审核`: pending review in the current or a future batch
-- `通过`: reviewed and passed
-- `未通过`: reviewed and failed
+- `未审核`：待审核，可能在本批次或后续批次处理
+- `通过`：已审核，且按宽标准通过
+- `未通过`：已审核，但存在必须修改的问题
 
-## Review baseline
+## 审核基准
 
-- Use the Chinese template image as the baseline.
-- Apply a lenient review standard.
-- Focus only on issues that materially affect correctness, safety, or readability.
-- Do not fail a template for minor phrasing polish or native-speaker style preferences.
+- 以中文模板图为基准。
+- 采用宽审核标准。
+- 只重点关注会明显影响正确性、安全性或阅读的高影响问题。
+- 不要因为轻微润色问题、表达风格问题、母语化偏好问题就判未通过。
 
-## Allowed issue categories
+## 允许记录的问题类别
 
 1. `①中文没翻译干净 / 其他语言残留`
 2. `②词语翻译错误`
 3. `③可改可不改，建议修改`
 
-## Pass / fail rule
+## 通过 / 未通过规则
 
-- If category 1 or category 2 appears anywhere in the template, mark the template as `未通过`.
-- If the template only has category 3 suggestions, mark the template as `通过`.
-- Category 3 items stay in the ledger remarks only and do not enter `未通过项.xlsx`.
+- 只要存在第 1 类或第 2 类问题，就判定为 `未通过`。
+- 如果只存在第 3 类问题，则按宽标准判定为 `通过`。
+- 第 3 类问题只保留在台账备注中，不进入 `未通过项.xlsx`。
 
-## Language rules
+## 语言规则
 
-- Each target-language template should contain one primary language.
-- Small amounts of English are acceptable inside other foreign-language templates when they are common product names, software names, abbreviations, or internationally common terms.
-- Do not fail a template for a small amount of acceptable English if reading is unaffected.
+- 原则上，一个目标语种模板中应只出现一种主要语言。
+- 但在其他外语模板中，少量英文可以放宽，只要它属于常见产品名、软件名、缩写或国际通用表达，且不影响阅读。
+- 不要因为少量可接受英文就直接判未通过。
 
-## Ambiguous translation rule
+## 一义多翻规则
 
-- Different translation tools may produce different valid wording.
-- If wording is ambiguous, check whether the target-language expression is acceptable and readable.
-- Accept one-to-many translation variants if meaning remains correct enough for reading.
-- Do not overcall a failure for style-only differences.
+- 不同翻译工具可能给出不同但都成立的译法。
+- 如果表达存在一义多翻，需要结合目标语言实际使用习惯判断是否成立。
+- 如果意思正确、表达可读、不影响理解，就可以按宽标准通过。
+- 不要因为纯风格差异就过度判错。
 
-## Sensitive content rule
+## 敏感内容规则
 
-Fail the template if it clearly introduces:
+如果模板中明显出现以下内容，应判定为未通过：
 
-- politically sensitive wording,
-- country-specific sensitive topics,
-- or other content that obviously conflicts with the target-language market context.
+- 政治敏感表述；
+- 与目标语言国家或地区相关的敏感话题；
+- 明显不适合目标市场语境的内容。
 
-## UI residue rule
+## 界面残留规则
 
-Ignore purely visual borders or non-text decorative UI elements.
+纯装饰性边框、非文字装饰元素可以忽略。
 
-Fail the template under category 1 if the delivered image still contains visible non-target-language UI text such as:
+但如果交付图片中仍然明显残留非目标语言界面文字，应按第 1 类问题处理，例如：
 
-- Chinese toolbars,
-- Chinese tabs,
-- Chinese status bars,
-- Chinese buttons,
-- or other obvious non-target-language interface text.
+- 中文工具栏；
+- 中文标签页；
+- 中文状态栏；
+- 中文按钮；
+- 其他明显不属于目标语言的界面文字。
 
-## Fail workbook requirements
+## 未通过表填写要求
 
-For every failed template:
+每一条未通过记录都必须包含：
 
-- include the batch label,
-- include the Chinese template image,
-- include the target-language template image,
-- include the assignee,
-- include the template name,
-- and keep `问题说明` and `修改意见` numbered one-to-one.
+- 审核批次；
+- 中文模板图；
+- 外文模板图；
+- 领取人；
+- 模板名称。
 
-`修改意见` must always be explicit and directly actionable in the form:
+`问题说明` 和 `修改意见` 必须：
+
+- 编号；
+- 一一对应；
+- 有几条问题，就必须有几条对应的修改意见。
+
+`修改意见` 必须写得足够明确，直接采用以下形式：
 
 `原文 -> 建议改为`

@@ -1,15 +1,15 @@
-# Output Schema
+# 输出结构
 
-Before exporting the two workbooks, assemble one JSON object that follows this structure.
+在导出两个 Excel 结果表之前，需要先组装一个符合本结构的 JSON 对象。
 
-## Required output files
+## 必须输出的文件
 
 - `检验进度台账.xlsx`
 - `未通过项.xlsx`
 
-Both files must be written into the same folder that the user provided.
+这两个文件都必须保存到用户最初提供的同一个文件夹中。
 
-## JSON shape
+## JSON 结构示例
 
 ```json
 {
@@ -68,19 +68,52 @@ Both files must be written into the same folder that the user provided.
 }
 ```
 
-## Rules
+## 字段规则
 
-- `run_mode` should be `first_batch` when no prior ledger exists, otherwise `followup_batch`.
-- `current_batch_label` should be the batch label assigned to newly added templates in this run, such as `第1批` or `第2批`.
-- `current_batch_count` must be the number of rows actually reviewed in this run.
-- `estimated_completion` should be the estimate announced before the detailed review.
-- `ledger_rows` must be the full final ledger state after merging old rows, newly accepted overview rows, and this run's review results.
-- Every ledger row must include `review_batch`.
-- `ledger_rows` may contain `未审核`, `通过`, and `未通过`.
-- `fail_rows` should be the full final fail workbook state after merging old failures and this run's new failures.
-- Every fail row must include `review_batch`.
-- If there are no failures, keep `fail_rows` as an empty array.
-- `problem_description` and `fix_suggestion` must use the same numbering.
-- Every item in `problem_description` must have a matching item in `fix_suggestion`.
-- `cn_image_path` and `target_image_path` should be absolute local file paths whenever possible.
-- If a pending row remains in the ledger because the current folder snapshot does not contain the needed images, keep that row in `ledger_rows` with status `未审核`.
+- `run_mode`：
+  - 没有历史台账时填 `first_batch`
+  - 有历史台账时填 `followup_batch`
+- `current_batch_label`：
+  - 本次新增进入台账的模板属于哪一批，就填哪一批，例如 `第1批`、`第2批`
+- `current_batch_count`：
+  - 必须是本次实际审核的模板数量
+- `estimated_completion`：
+  - 必须与正式细审前告知用户的预计完成时间一致
+
+## 台账数据规则
+
+- `ledger_rows` 必须是最终完整台账，不是只放本次新增行。
+- 它应包含：
+  - 历史台账保留下来的旧行；
+  - 本次根据总览图新增进入台账的行；
+  - 本次审核后更新状态的行。
+- 每一条 `ledger_rows` 记录都必须带 `review_batch`。
+- `status` 允许的值只有：
+  - `未审核`
+  - `通过`
+  - `未通过`
+
+## 未通过数据规则
+
+- `fail_rows` 必须是最终完整未通过表，不是只放本次新增未通过项。
+- 它应包含：
+  - 历史未通过项；
+  - 本次新增未通过项。
+- 每一条 `fail_rows` 记录都必须带 `review_batch`。
+- 如果本次和历史累计后都没有未通过项，就保持空数组 `[]`。
+
+## 文案规则
+
+- `problem_description` 和 `fix_suggestion` 必须使用相同编号。
+- `problem_description` 里有几条问题，`fix_suggestion` 里就必须有几条对应修改意见。
+- `fix_suggestion` 必须写成可直接执行的明确修改，尽量使用：
+  - `原文 -> 建议改为`
+
+## 图片路径规则
+
+- `cn_image_path` 和 `target_image_path` 尽量使用绝对本地路径。
+- 如果某条记录进入 `fail_rows`，应尽量保证后续导出时能把真实图片嵌入 Excel。
+
+## 保留未审核的情况
+
+如果某条记录仍保留在台账里，但当前文件夹快照中已找不到本次审核所需图片，则该记录可以继续保留在 `ledger_rows` 中，且 `status` 维持为 `未审核`。
