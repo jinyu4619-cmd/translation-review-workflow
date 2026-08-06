@@ -2,14 +2,66 @@
 
 Use these rules every time this skill reviews template translation images.
 
+## Batch logic
+
+The user will only provide one folder. The skill must determine the batch mode on its own.
+
+Important operational detail:
+
+- The user may replace the overview image and the PNG image set before every new batch.
+- The current folder should therefore be treated as the latest batch snapshot.
+- Do not assume older image files are still present.
+- The workbooks carry the history across batches.
+
+### First-batch mode
+
+If no existing ledger workbook is present in the folder:
+
+1. Inspect the overview image.
+2. Identify templates clearly marked as accepted.
+3. Build ledger rows for those accepted templates.
+4. Treat those newly created rows as the current review batch.
+
+### Follow-up batch mode
+
+If an existing ledger workbook is present in the folder:
+
+1. Read the existing ledger workbook.
+2. Inspect the overview image.
+3. Find templates clearly marked as accepted in the overview image.
+4. Add any accepted template that is missing from the ledger as a new ledger row with pending status.
+5. Review only ledger rows that are still pending.
+
+In other words:
+
+- no ledger -> create one from overview-accepted templates,
+- existing ledger -> reuse it, add newly accepted templates, and review only pending rows.
+
+## Per-language batch tracking
+
+- Each language keeps its own running batch labels in the ledger.
+- When a language enters the ledger for the first time, assign the newly added rows to `第1批`.
+- On later runs for that language, read the existing ledger, find the highest existing batch number for that language, and assign newly accepted templates that are still missing from the ledger to `第N+1批`.
+- Keep the original batch label on old rows even when they are reviewed later.
+- Before the detailed review starts, state clearly which batch this run is for that language, for example `英文第2批审核`.
+
 ## Scope filter
 
-Only review templates that satisfy both conditions:
+Only review templates that satisfy the workflow scope for the current batch:
 
-1. The overview image clearly marks the template as `审核通过`, `验收通过`, or an equivalent accepted status.
-2. The overview/ledger status still shows `未审核`.
+1. The overview image clearly marks the template as accepted.
+2. The template is pending in the ledger, or it is newly accepted and not yet present in the ledger.
+3. The template's current Chinese image and current target-language image can both be found in the current folder.
 
 Do not review templates outside that scope.
+
+If a ledger row is still pending but the current folder no longer contains the images needed to review it, keep that row as pending and do not force a result.
+
+## Ledger status meanings
+
+- `未审核`: pending review in the current or a future batch
+- `通过`: reviewed and passed
+- `未通过`: reviewed and failed
 
 ## Review baseline
 
@@ -27,7 +79,7 @@ Do not review templates outside that scope.
 ## Pass / fail rule
 
 - If category 1 or category 2 appears anywhere in the template, mark the template as `未通过`.
-- If the template only has category 3 suggestions, mark it as `通过`.
+- If the template only has category 3 suggestions, mark the template as `通过`.
 - Category 3 items stay in the ledger remarks only and do not enter `未通过项.xlsx`.
 
 ## Language rules
@@ -67,6 +119,7 @@ Fail the template under category 1 if the delivered image still contains visible
 
 For every failed template:
 
+- include the batch label,
 - include the Chinese template image,
 - include the target-language template image,
 - include the assignee,
