@@ -297,7 +297,7 @@ def collect_existing_outputs(folder: Path) -> dict[str, object]:
     suggested_mode = "followup_batch" if existing_ledger["exists"] else "first_batch"
     return {
         "suggested_mode": suggested_mode,
-        "batch_note": "Use per-language batch labels. If the current language has no ledger rows, start at 第1批. Otherwise add newly accepted rows as the next batch for that language.",
+        "batch_note": "Use per-language batch labels. The current folder itself defines the current review scope. If the current language has no ledger rows, start at 第1批. Otherwise add template pairs from the current folder that are missing from the ledger as the next batch for that language. Overview images are optional context only.",
         "ledger": existing_ledger,
         "fail_workbook": existing_failures,
     }
@@ -305,9 +305,12 @@ def collect_existing_outputs(folder: Path) -> dict[str, object]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Scan a review folder, detect overview candidates, and inspect any existing review workbooks."
+        description="Scan a review folder, summarize current review images, and inspect any existing review workbooks."
     )
-    parser.add_argument("folder", help="Folder that contains review images and overview images.")
+    parser.add_argument(
+        "folder",
+        help="Folder that contains the current batch review images, plus optional overview or historical workbooks.",
+    )
     parser.add_argument(
         "--write-json",
         help="Optional path to save the JSON result. If omitted, print to stdout.",
@@ -333,11 +336,12 @@ def main() -> int:
         "all_images": images,
         "existing_outputs": existing_outputs,
         "notes": [
-            "Inspect overview_candidate images first.",
+            "Use current template_candidate images as the main review scope. Overview images are optional context only.",
             "Scan image files recursively because the current folder may contain a nested PNG export folder.",
             "Treat the current folder as the latest batch snapshot instead of assuming all historical images still exist.",
             "If no ledger workbook exists, treat this as first-batch mode.",
-            "If a ledger workbook exists, read it, add newly accepted overview templates that are missing from it, and review only rows still marked pending whose current images can be found.",
+            "If a ledger workbook exists, read it, add current-folder templates that are missing from it as the next batch, and review rows that are still marked pending when their current images can be found.",
+            "Do not require overview approval labels to enter the review scope.",
             "Use file order and image content together when pairing Chinese and target-language images.",
         ],
     }
